@@ -33,6 +33,16 @@ contract SafeContract {
         require(users[_address].dateCreateUser != 0, "User already exists");
         _;
     }
+    constructor () {
+        owner = OwnerStruct({
+            ownerAddress: msg.sender,
+            initialSupply: initialSuplyOwner,
+            nameOwner: nameOwner,
+            createOwner: block.timestamp
+        });
+
+        dayOpenContract = block.timestamp;
+    }
 
     receive() external payable {
         require(msg.value > 0, "Must send some ether");
@@ -72,14 +82,10 @@ contract SafeContract {
         return users[_addressUser];
     }
 
-    constructor () {
-        owner = OwnerStruct({
-            ownerAddress: msg.sender,
-            initialSupply: initialSuplyOwner,
-            nameOwner: nameOwner,
-            createOwner: block.timestamp
-        });
+    function getUnlockedDate (address _addressuser) public view verifyAddress(_addressuser) returns(uint256) {
+        require(users[_addressuser].dateCreateUser != 0, "User does not exist");
+        require(users[_addressuser].unlockPeriod > 0, "No date to unlock");
 
-        dayOpenContract = block.timestamp;
+        return users[_addressuser].unlockPeriod;
     }
 }
