@@ -82,10 +82,30 @@ contract SafeContract {
         return users[_addressUser];
     }
 
-    function getUnlockedDate (address _addressuser) public view verifyAddress(_addressuser) returns(uint256) {
-        require(users[_addressuser].dateCreateUser != 0, "User does not exist");
-        require(users[_addressuser].unlockPeriod > 0, "No date to unlock");
+    function getUnlockedDate (address _addressUser) public view verifyAddress(_addressUser) noRepeatUser(_addressUser) returns(uint256) {
+        require(_addressUser == msg.sender || msg.sender == owner.ownerAddress, "You can only check your own unlock date");
+        require(users[_addressUser].dateCreateUser != 0, "User does not exist");
+        require(users[_addressUser].unlockPeriod > 0, "No date to unlock");
 
-        return users[_addressuser].unlockPeriod;
+        return users[_addressUser].unlockPeriod;
+    }
+
+    function deposit (address _toSend, uint256 _unlockPeriod) public payable verifyAddress(msg.sender) returns(bool success) {
+        require(users[msg.sender].dateCreateUser != 0, "User does not exist");
+        require(msg.value > 0, "Value must be greater than zero");
+        require(users[msg.sender].balance >= msg.value, "Insufficient balance");
+
+        if(users[_toSend].dateCreateUser == 0) {
+            owner.initialSupply += msg.value;
+        }
+
+        if(_unlockPeriod > 0) {
+            users[_toSend].unlockPeriod = block.timestamp + _unlockPeriod;
+        }
+
+        users[msg.sender].balance -= msg.value;
+        users[_toSend].balance += msg.value;
+
+        return true;
     }
 }
