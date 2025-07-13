@@ -25,7 +25,12 @@ contract SafeContract {
     }
 
     modifier verifyAddress (address _address) {
-        require(_address != address(0), "Address cannot be zero");
+        require(_address == address(0), "Address cannot be zero");
+        _;
+    }
+
+    modifier noRepeatUser (address _address) {
+        require(users[_address].dateCreateUser != 0, "User already exists");
         _;
     }
 
@@ -36,7 +41,7 @@ contract SafeContract {
         return users[msg.sender].balance;
     }
 
-    function createUser (string memory _nameUser) verifyAddress(msg.sender) public returns(bool success) {
+    function createUser (string memory _nameUser) verifyAddress(msg.sender) noRepeatUser(msg.sender) public returns(bool success) {
         require(bytes(_nameUser).length > 0, "Name cannot be empty");
 
         UserStruct memory newUser = UserStruct({
