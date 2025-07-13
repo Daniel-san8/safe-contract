@@ -8,7 +8,7 @@ contract SafeContract {
     uint256 public dayOpenContract;
     uint8 public initialSuplyUser = 0;
 
-    mapping (address => UserStruct) public user;
+    mapping (address => UserStruct) public users;
 
     struct OwnerStruct {
         address ownerAddress;
@@ -22,15 +22,37 @@ contract SafeContract {
         uint256 unlockPeriod;
         uint256 dateCreateUser;
         string nameUser;
-        uint256 initialSuplyUser;
-        address userAddress;
+    }
+
+    modifier verifyAddress (address _address) {
+        require(_address != address(0), "Address cannot be zero");
+        _;
     }
 
     function checkBalance () public view returns(uint256) {
-        require(user[msg.sender].userAddress != address(0), "User does not exist");
-        require(user[msg.sender].userAddress == msg.sender, "You are not the user");
-        
-        return user[msg.sender].balance;
+        require(msg.sender != address(0), "User does not exist");
+        require(users[msg.sender].balance > 0, "User balance is zero");
+
+        return users[msg.sender].balance;
+    }
+
+    function createUser (string memory _nameUser) verifyAddress(msg.sender) public returns(bool success) {
+        require(bytes(_nameUser).length > 0, "Name cannot be empty");
+
+        UserStruct memory newUser = UserStruct({
+            balance: initialSuplyUser,
+            unlockPeriod: 0,
+            dateCreateUser: block.timestamp,
+            nameUser: _nameUser
+        });
+
+        users[msg.sender] = newUser;
+
+        return true;
+    }
+
+    function getUser (address _addressUser) public view verifyAddress(_addressUser) returns(UserStruct memory) {
+        return users[_addressUser];
     }
 
     constructor () {
