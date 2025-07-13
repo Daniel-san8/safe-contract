@@ -23,6 +23,14 @@ contract SafeContract {
         uint256 dateCreateUser;
         string nameUser;
         uint256 initialSuplyUser;
+        address userAddress;
+    }
+
+    function checkBalance () public view returns(uint256) {
+        require(user[msg.sender].userAddress != address(0), "User does not exist");
+        require(user[msg.sender].userAddress == msg.sender, "You are not the user");
+        
+        return user[msg.sender].balance;
     }
 
     constructor () {
