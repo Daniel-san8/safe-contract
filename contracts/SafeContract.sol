@@ -108,4 +108,16 @@ contract SafeContract {
 
         return true;
     }
+
+    function withdraw (uint256 _amount) public verifyAddress(msg.sender) returns(bool success) {
+        require(users[msg.sender].balance >= _amount, "Insufficient user balance");
+        require(msg.sender.balance >= _amount, "Insufficient contract balance");
+
+        users[msg.sender].balance -= _amount;
+
+        (bool sent, ) = msg.sender.call{value: _amount}("");
+        require(sent, "Transfer failed");
+
+        return true;
+    }
 }
