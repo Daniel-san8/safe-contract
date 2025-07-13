@@ -8,7 +8,7 @@ contract SafeContract {
     uint256 public dayOpenContract;
     uint8 public initialSuplyUser = 0;
 
-    mapping (address => UserStruct) public users;
+    mapping (address => UserStruct) private users;
 
     struct OwnerStruct {
         address ownerAddress;
@@ -34,8 +34,20 @@ contract SafeContract {
         _;
     }
 
-    function checkBalance () public view returns(uint256) {
-        require(msg.sender != address(0), "User does not exist");
+    receive() external payable {
+        require(msg.value > 0, "Must send some ether");
+        require(users[msg.sender].dateCreateUser != 0, "User does not exist");
+
+        users[msg.sender].balance += msg.value;
+    }
+
+    fallback() external payable {
+        require(msg.value > 0, "Must send some ether");
+
+        users[msg.sender].balance += msg.value;
+    }
+
+    function checkBalance () public view verifyAddress(msg.sender) returns(uint256) {
         require(users[msg.sender].balance > 0, "User balance is zero");
 
         return users[msg.sender].balance;
