@@ -15,6 +15,14 @@ contract SafeContract {
     mapping(address => mapping(address => uint256[])) public unlockDates;
     mapping(address => UserStruct) private users;
 
+    event TransferEvent(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bool addUnlockPeriod,
+        uint256 unlockDate
+    );
+
     enum OptionsWithdraw {
         Withdraw,
         User
@@ -108,15 +116,15 @@ contract SafeContract {
     }
 
     function getUnlockedDate(
-        address sender,
+        address _sender,
         uint256 index
     ) public view verifyAddress(msg.sender) returns (uint256) {
         require(
-            unlockPeriods[msg.sender][msg.sender][index] > 0,
+            unlockPeriods[msg.sender][_sender][index] > 0,
             "No date to unlock"
         );
 
-        return unlockPeriods[msg.sender][sender][index];
+        return unlockPeriods[msg.sender][_sender][index];
     }
 
     function deposit()
@@ -156,12 +164,20 @@ contract SafeContract {
             unlockCounts[_to][msg.sender]++;
 
             users[msg.sender].balance -= _amount;
+            emit TransferEvent(
+                msg.sender,
+                _to,
+                _amount,
+                addUnlockPeriod,
+                unlockDate
+            );
 
             return true;
         }
 
         users[msg.sender].balance -= _amount;
         users[_to].balance += _amount;
+        emit TransferEvent(msg.sender, _to, _amount, addUnlockPeriod, 0);
 
         return true;
     }
