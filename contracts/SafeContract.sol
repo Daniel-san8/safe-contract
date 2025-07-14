@@ -22,6 +22,7 @@ contract SafeContract {
         bool addUnlockPeriod,
         uint256 unlockDate
     );
+    event DepositEvent(address indexed user, uint256 indexed amount);
 
     enum OptionsWithdraw {
         Withdraw,
@@ -136,6 +137,8 @@ contract SafeContract {
         require(msg.value > 0, "Must send ETH to deposit");
 
         users[msg.sender].balance += msg.value;
+
+        emit DepositEvent(msg.sender, msg.value);
 
         return true;
     }
