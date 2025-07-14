@@ -48,6 +48,12 @@ contract SafeContract {
         uint256 balance;
         uint256 dateCreateUser;
         string nameUser;
+        address userAddress;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner.ownerAddress, "Only owner can call this");
+        _;
     }
 
     modifier verifyAddress(address _address) {
@@ -110,6 +116,7 @@ contract SafeContract {
         user.balance = initialSupplyUser;
         user.dateCreateUser = block.timestamp;
         user.nameUser = _nameUser;
+        user.userAddress = msg.sender;
 
         return true;
     }
@@ -129,11 +136,11 @@ contract SafeContract {
         uint256 index
     ) public view verifyAddress(msg.sender) returns (uint256) {
         require(
-            unlockPeriods[msg.sender][_sender][index] > 0,
+            unlockDates[msg.sender][_sender][index] > 0,
             "No date to unlock"
         );
 
-        return unlockPeriods[msg.sender][_sender][index];
+        return unlockDates[msg.sender][_sender][index];
     }
 
     function deposit()
@@ -169,7 +176,7 @@ contract SafeContract {
                 "Unlock date must be in the future"
             );
 
-            uint256 index = unlockCounts[_to][_to];
+            uint256 index = unlockCounts[_to][msg.sender];
             unlockPeriods[_to][msg.sender][index] = _amount;
             unlockDates[_to][msg.sender].push(unlockDate);
             unlockCounts[_to][msg.sender]++;
@@ -211,8 +218,25 @@ contract SafeContract {
         return true;
     }
 
-    function unlockMyFunds(address sender) public {
+    /// @notice Unlocks any funds available from a specific sender.
+    /// @dev Must be called manually by the user. Does not unlock automatically.
+
+    function unlockMyFunds(address sender) public returns (uint256) {
+        require(
+            unlockCounts[msg.sender][sender] > 0,
+            "No locked funds from sender"
+        );
+        require(
+            unlockDates[msg.sender][sender].length > 0,
+            "No unlock dates available"
+        );
+        require(
+            msg.sender == users[msg.sender].userAddress,
+            "Unauthorized user"
+        );
+
         uint256 count = unlockCounts[msg.sender][sender];
+        uint256 totalUnlocked = 0;
 
         for (uint256 i = 0; i < count; i++) {
             uint256 unlockDate = unlockDates[msg.sender][sender][i];
@@ -221,8 +245,19 @@ contract SafeContract {
             if (block.timestamp >= unlockDate && amount > 0) {
                 unlockPeriods[msg.sender][sender][i] = 0;
                 users[msg.sender].balance += amount;
+                totalUnlocked += amount;
                 emit UnlockEvent(msg.sender, sender, amount, true, unlockDate);
             }
         }
+        return totalUnlocked;
+    }
+
+    function getUnlockedDatesCount() public view returns (uint256) {
+        require(
+            unlockDates[msg.sender][msg.sender].length > 0,
+            "No unlock dates available"
+        );
+
+        return unlockDates[msg.sender][msg.sender].length;
     }
 }
