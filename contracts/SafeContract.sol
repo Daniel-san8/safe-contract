@@ -24,6 +24,13 @@ contract SafeContract {
     );
     event DepositEvent(address indexed user, uint256 indexed amount);
     event WithdrawEvent(address indexed user, uint256 indexed amount);
+    event UnlockEvent(
+        address indexed user,
+        address indexed sender,
+        uint256 amount,
+        bool success,
+        uint256 unlockDate
+    );
 
     enum OptionsWithdraw {
         Withdraw,
@@ -214,6 +221,7 @@ contract SafeContract {
             if (block.timestamp >= unlockDate && amount > 0) {
                 unlockPeriods[msg.sender][sender][i] = 0;
                 users[msg.sender].balance += amount;
+                emit UnlockEvent(msg.sender, sender, amount, true, unlockDate);
             }
         }
     }
