@@ -23,6 +23,7 @@ contract SafeContract {
         uint256 unlockDate
     );
     event DepositEvent(address indexed user, uint256 indexed amount);
+    event WithdrawEvent(address indexed user, uint256 indexed amount);
 
     enum OptionsWithdraw {
         Withdraw,
@@ -187,7 +188,7 @@ contract SafeContract {
 
     function withdraw(
         uint256 _amount
-    ) public verifyAddress(msg.sender) returns (bool) {
+    ) public verifyAddress(msg.sender) returns (bool success) {
         require(users[msg.sender].balance >= _amount, "Insufficient balance");
         require(
             address(this).balance >= _amount,
@@ -198,6 +199,7 @@ contract SafeContract {
 
         (bool sent, ) = msg.sender.call{value: _amount}("");
         require(sent, "Transfer failed");
+        emit WithdrawEvent(msg.sender, _amount);
 
         return true;
     }
