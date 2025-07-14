@@ -8,6 +8,11 @@ contract SafeContract {
     uint256 public dayOpenContract;
     uint8 public initialSupplyUser = 100;
 
+    mapping(address => mapping(address => mapping(uint256 => uint256)))
+        public unlockPeriods;
+
+    mapping(address => mapping(address => uint256)) public unlockCounts;
+    mapping(address => mapping(address => uint256[])) public unlockDates;
     mapping(address => UserStruct) private users;
 
     enum OptionsWithdraw {
@@ -24,7 +29,6 @@ contract SafeContract {
 
     struct UserStruct {
         uint256 balance;
-        mapping(address => mapping(uint256 => uint256)) unlockPeriods;
         uint256 dateCreateUser;
         string nameUser;
     }
@@ -89,7 +93,6 @@ contract SafeContract {
         user.balance = initialSupplyUser;
         user.dateCreateUser = block.timestamp;
         user.nameUser = _nameUser;
-        user.unlockPeriods[msg.sender][0] = 0;
 
         return true;
     }
@@ -104,39 +107,24 @@ contract SafeContract {
         return (user.balance, user.dateCreateUser, user.nameUser);
     }
 
-    function getUnlockPeriod(
-        address user,
+    function getUnlockedDate(
         address sender,
         uint256 index
-    ) public view returns (uint256) {
-        return users[user].unlockPeriods[sender][index];
-    }
-
-    function getUnlockedDate(
-        address _addressUser,
-        uint256 index
-    )
-        public
-        view
-        verifyAddress(_addressUser)
-        userNotExists(_addressUser)
-        returns (uint256)
-    {
+    ) public view verifyAddress(msg.sender) returns (uint256) {
         require(
-            _addressUser == msg.sender || msg.sender == owner.ownerAddress,
-            "You can only check your own unlock date"
-        );
-        require(users[msg.sender].dateCreateUser != 0, "User does not exist");
-        require(
-            users[msg.sender].unlockPeriods[msg.sender][index] > 0,
+            unlockPeriods[msg.sender][msg.sender][index] > 0,
             "No date to unlock"
         );
 
-        return users[_addressUser].unlockPeriods[msg.sender][index];
+        return unlockPeriods[msg.sender][sender][index];
     }
 
-    function deposit() public payable verifyAddress(msg.sender) returns (bool) {
-        require(users[msg.sender].dateCreateUser != 0, "User does not exist");
+    function deposit()
+        public
+        payable
+        verifyAddress(msg.sender)
+        returns (bool success)
+    {
         require(msg.value > 0, "Must send ETH to deposit");
 
         users[msg.sender].balance += msg.value;
@@ -146,6 +134,8 @@ contract SafeContract {
 
     function transfer(
         address _to,
+        bool addUnlockPeriod,
+        uint256 unlockDate,
         uint256 _amount
     ) public verifyAddress(msg.sender) returns (bool) {
         require(users[msg.sender].balance >= _amount, "Insufficient balance");
@@ -153,6 +143,22 @@ contract SafeContract {
             users[_to].dateCreateUser != 0,
             "Recipient user does not exist"
         );
+
+        if (addUnlockPeriod) {
+            require(
+                unlockDate > block.timestamp,
+                "Unlock date must be in the future"
+            );
+
+            uint256 index = unlockCounts[_to][_to];
+            unlockPeriods[_to][msg.sender][index] = _amount;
+            unlockDates[_to][msg.sender].push(unlockDate);
+            unlockCounts[_to][msg.sender]++;
+
+            users[msg.sender].balance -= _amount;
+
+            return true;
+        }
 
         users[msg.sender].balance -= _amount;
         users[_to].balance += _amount;
@@ -175,5 +181,19 @@ contract SafeContract {
         require(sent, "Transfer failed");
 
         return true;
+    }
+
+    function unlockMyFunds(address sender) public {
+        uint256 count = unlockCounts[msg.sender][sender];
+
+        for (uint256 i = 0; i < count; i++) {
+            uint256 unlockDate = unlockDates[msg.sender][sender][i];
+            uint256 amount = unlockPeriods[msg.sender][sender][i];
+
+            if (block.timestamp >= unlockDate && amount > 0) {
+                unlockPeriods[msg.sender][sender][i] = 0;
+                users[msg.sender].balance += amount;
+            }
+        }
     }
 }
