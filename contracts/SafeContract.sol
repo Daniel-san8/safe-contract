@@ -6,9 +6,9 @@ contract SafeContract {
     string public nameOwner = "Baldwin";
     OwnerStruct public owner;
     uint256 public dayOpenContract;
-    uint8 public initialSupplyUser = 0;
+    uint8 public initialSupplyUser = 100;
 
-    mapping (address => UserStruct) private users;
+    mapping(address => UserStruct) private users;
 
     enum OptionsWithdraw {
         Withdraw,
@@ -20,26 +20,26 @@ contract SafeContract {
         uint256 balanceOwner;
         string nameOwner;
         uint256 createOwner;
-
     }
 
     struct UserStruct {
         uint256 balance;
-        uint256 unlockPeriod;
+        mapping(address => mapping(uint256 => uint256)) unlockPeriods;
         uint256 dateCreateUser;
         string nameUser;
     }
 
-    modifier verifyAddress (address _address) {
+    modifier verifyAddress(address _address) {
         require(_address != address(0), "Address cannot be zero");
         _;
     }
 
-    modifier userNotExists (address _address) {
+    modifier userNotExists(address _address) {
         require(users[_address].dateCreateUser == 0, "User already exists");
         _;
     }
-    constructor () {
+
+    constructor() {
         owner = OwnerStruct({
             ownerAddress: msg.sender,
             balanceOwner: initialSupplyOwner,
@@ -64,40 +64,78 @@ contract SafeContract {
         users[msg.sender].balance += msg.value;
     }
 
-    function checkBalance () public view verifyAddress(msg.sender) returns(uint256) {
+    function checkBalance()
+        public
+        view
+        verifyAddress(msg.sender)
+        returns (uint256)
+    {
         require(users[msg.sender].balance > 0, "User balance is zero");
 
         return users[msg.sender].balance;
     }
 
-    function createUser (string memory _nameUser) verifyAddress(msg.sender) userNotExists(msg.sender) public returns(bool success) {
+    function createUser(
+        string memory _nameUser
+    )
+        public
+        verifyAddress(msg.sender)
+        userNotExists(msg.sender)
+        returns (bool success)
+    {
         require(bytes(_nameUser).length > 0, "Name cannot be empty");
 
-        UserStruct memory newUser = UserStruct({
-            balance: initialSupplyUser,
-            unlockPeriod: 0,
-            dateCreateUser: block.timestamp,
-            nameUser: _nameUser
-        });
-
-        users[msg.sender] = newUser;
+        UserStruct storage user = users[msg.sender];
+        user.balance = initialSupplyUser;
+        user.dateCreateUser = block.timestamp;
+        user.nameUser = _nameUser;
+        user.unlockPeriods[msg.sender][0] = 0;
 
         return true;
     }
 
-    function getUser (address _addressUser) public view verifyAddress(_addressUser) returns(UserStruct memory) {
-        return users[_addressUser];
+    function getUser()
+        public
+        view
+        verifyAddress(msg.sender)
+        returns (uint256, uint256, string memory)
+    {
+        UserStruct storage user = users[msg.sender];
+        return (user.balance, user.dateCreateUser, user.nameUser);
     }
 
-    function getUnlockedDate (address _addressUser) public view verifyAddress(_addressUser) userNotExists(_addressUser) returns(uint256) {
-        require(_addressUser == msg.sender || msg.sender == owner.ownerAddress, "You can only check your own unlock date");
-        require(users[_addressUser].dateCreateUser != 0, "User does not exist");
-        require(users[_addressUser].unlockPeriod > 0, "No date to unlock");
-
-        return users[_addressUser].unlockPeriod;
+    function getUnlockPeriod(
+        address user,
+        address sender,
+        uint256 index
+    ) public view returns (uint256) {
+        return users[user].unlockPeriods[sender][index];
     }
 
-    function deposit() public payable verifyAddress(msg.sender) returns(bool) {
+    function getUnlockedDate(
+        address _addressUser,
+        uint256 index
+    )
+        public
+        view
+        verifyAddress(_addressUser)
+        userNotExists(_addressUser)
+        returns (uint256)
+    {
+        require(
+            _addressUser == msg.sender || msg.sender == owner.ownerAddress,
+            "You can only check your own unlock date"
+        );
+        require(users[msg.sender].dateCreateUser != 0, "User does not exist");
+        require(
+            users[msg.sender].unlockPeriods[msg.sender][index] > 0,
+            "No date to unlock"
+        );
+
+        return users[_addressUser].unlockPeriods[msg.sender][index];
+    }
+
+    function deposit() public payable verifyAddress(msg.sender) returns (bool) {
         require(users[msg.sender].dateCreateUser != 0, "User does not exist");
         require(msg.value > 0, "Must send ETH to deposit");
 
@@ -106,9 +144,15 @@ contract SafeContract {
         return true;
     }
 
-    function transfer(address _to, uint256 _amount) public verifyAddress(msg.sender) returns(bool) {
+    function transfer(
+        address _to,
+        uint256 _amount
+    ) public verifyAddress(msg.sender) returns (bool) {
         require(users[msg.sender].balance >= _amount, "Insufficient balance");
-        require(users[_to].dateCreateUser != 0, "Recipient user does not exist");
+        require(
+            users[_to].dateCreateUser != 0,
+            "Recipient user does not exist"
+        );
 
         users[msg.sender].balance -= _amount;
         users[_to].balance += _amount;
@@ -116,9 +160,14 @@ contract SafeContract {
         return true;
     }
 
-    function withdraw(uint256 _amount) public verifyAddress(msg.sender) returns(bool) {
+    function withdraw(
+        uint256 _amount
+    ) public verifyAddress(msg.sender) returns (bool) {
         require(users[msg.sender].balance >= _amount, "Insufficient balance");
-        require(address(this).balance >= _amount, "Insufficient contract balance");
+        require(
+            address(this).balance >= _amount,
+            "Insufficient contract balance"
+        );
 
         users[msg.sender].balance -= _amount;
 
@@ -127,5 +176,4 @@ contract SafeContract {
 
         return true;
     }
-
 }
