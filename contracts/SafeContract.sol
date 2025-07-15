@@ -136,10 +136,10 @@ contract SafeContract {
         public
         view
         verifyAddress(msg.sender)
-        returns (uint256, uint256, string memory)
+        returns (uint256, string memory, uint256)
     {
         UserStruct storage user = users[msg.sender];
-        return (user.balance, user.dateCreateUser, user.nameUser);
+        return (user.balance, user.nameUser, user.dateCreateUser);
     }
 
     function getUnlockedDate(
@@ -154,17 +154,15 @@ contract SafeContract {
         return unlockDates[msg.sender][_sender][index];
     }
 
-    function deposit()
-        public
-        payable
-        verifyAddress(msg.sender)
-        returns (bool success)
-    {
-        require(msg.value > 0, "Must send ETH to deposit");
+    function deposit(
+        uint256 _amount
+    ) public payable verifyAddress(msg.sender) returns (bool success) {
+        require(_amount > 0, "Must send ETH to deposit");
+        require(_amount <= 200, "Deposit limit is 200 ETH");
 
-        users[msg.sender].balance += msg.value;
+        users[msg.sender].balance += _amount;
 
-        emit DepositEvent(msg.sender, msg.value);
+        emit DepositEvent(msg.sender, _amount);
 
         return true;
     }
