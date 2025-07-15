@@ -156,7 +156,7 @@ contract SafeContract {
 
     function deposit(
         uint256 _amount
-    ) public payable verifyAddress(msg.sender) returns (bool success) {
+    ) public verifyAddress(msg.sender) returns (bool success) {
         require(_amount > 0, "Must send ETH to deposit");
         require(_amount <= 200, "Deposit limit is 200 ETH");
 
@@ -172,7 +172,7 @@ contract SafeContract {
         bool addUnlockPeriod,
         uint256 unlockDate,
         uint256 _amount
-    ) public verifyAddress(msg.sender) returns (bool) {
+    ) public verifyAddress(msg.sender) verifyAddress(_to) returns (bool) {
         require(users[msg.sender].balance >= _amount, "Insufficient balance");
         require(
             users[_to].dateCreateUser != 0,
@@ -217,11 +217,15 @@ contract SafeContract {
             address(this).balance >= _amount,
             "Insufficient contract balance"
         );
+        require(
+            address(this).balance >= _amount,
+            "Insufficient contract balance"
+        );
 
         users[msg.sender].balance -= _amount;
 
-        (bool sent, ) = msg.sender.call{value: _amount}("");
-        require(sent, "Transfer failed");
+        // (bool sent, ) = msg.sender.call{value: _amount}("");
+        // require(sent, "Transfer failed");
         emit WithdrawEvent(msg.sender, _amount);
 
         return true;
