@@ -75,6 +75,12 @@ contract SafeContract {
         });
 
         dayOpenContract = block.timestamp;
+        users[msg.sender] = UserStruct({
+            balance: initialSupplyOwner,
+            dateCreateUser: block.timestamp,
+            nameUser: nameOwner,
+            userAddress: msg.sender
+        });
     }
 
     receive() external payable {
