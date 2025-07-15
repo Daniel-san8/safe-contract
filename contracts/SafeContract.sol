@@ -39,7 +39,7 @@ contract SafeContract {
 
     struct OwnerStruct {
         address ownerAddress;
-        uint256 balanceOwner;
+        uint256 balance;
         string nameOwner;
         uint256 createOwner;
     }
@@ -69,7 +69,7 @@ contract SafeContract {
     constructor() {
         owner = OwnerStruct({
             ownerAddress: msg.sender,
-            balanceOwner: initialSupplyOwner,
+            balance: initialSupplyOwner,
             nameOwner: nameOwner,
             createOwner: block.timestamp
         });
@@ -111,6 +111,11 @@ contract SafeContract {
         returns (bool success)
     {
         require(bytes(_nameUser).length > 0, "Name cannot be empty");
+        require(
+            keccak256(bytes(_nameUser)) != keccak256(bytes("Baldwin")),
+            "Cannot use owner name"
+        );
+        require(msg.sender != owner.ownerAddress, "Owner cannot create user");
 
         UserStruct storage user = users[msg.sender];
         user.balance = initialSupplyUser;
