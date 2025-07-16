@@ -136,10 +136,15 @@ contract SafeContract {
         public
         view
         verifyAddress(msg.sender)
-        returns (uint256, string memory, uint256)
+        returns (uint256, string memory, uint256, address)
     {
         UserStruct storage user = users[msg.sender];
-        return (user.balance, user.nameUser, user.dateCreateUser);
+        return (
+            user.balance,
+            user.nameUser,
+            user.dateCreateUser,
+            user.userAddress
+        );
     }
 
     function getUnlockedDate(
@@ -213,14 +218,6 @@ contract SafeContract {
         uint256 _amount
     ) public verifyAddress(msg.sender) returns (bool success) {
         require(users[msg.sender].balance >= _amount, "Insufficient balance");
-        require(
-            address(this).balance >= _amount,
-            "Insufficient contract balance"
-        );
-        require(
-            address(this).balance >= _amount,
-            "Insufficient contract balance"
-        );
 
         users[msg.sender].balance -= _amount;
 
